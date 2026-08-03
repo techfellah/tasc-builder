@@ -13,6 +13,7 @@ from typer.testing import CliRunner
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "core"))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "projects"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "agents"))
 
 from tasc_cli.app import app
 from tasc_core.exceptions import (
@@ -22,6 +23,14 @@ from tasc_core.exceptions import (
 )
 from tasc_projects.exceptions import ProjectException
 from tasc_projects.models import Project, ProjectConfiguration, ProjectMetadata
+from tasc_agents.exceptions import AgentException
+from tasc_agents.models import (
+    Agent,
+    AgentConfiguration,
+    AgentMetadata,
+    AgentModel,
+    AgentRole,
+)
 
 
 class CliTests(unittest.TestCase):
@@ -299,6 +308,61 @@ class CliTests(unittest.TestCase):
         self.assertNotEqual(result.exit_code, 0)
         self.assertIn("Project not found: demo", result.output)
 
+    def test_agent_create_command(self) -> None:
+        with patch("tasc_cli.commands.agent.AgentService") as service_class:
+            result = self.runner.invoke(app, ["agent", "create", "planner"])
+
+        self.assertEqual(result.exit_code, 0)
+        self.assertEqual(result.output, "Agent created.\n")
+        created_agent = service_class.return_value.create_agent.call_args.args[0]
+        self.assertEqual(created_agent.metadata.name, "planner")
+
+    def test_agent_list_command(self) -> None:
+        with patch("tasc_cli.commands.agent.AgentService") as service_class:
+            service_class.return_value.list_agents.return_value = [
+                self._agent("first"),
+                self._agent("second"),
+            ]
+
+            result = self.runner.invoke(app, ["agent", "list"])
+
+        self.assertEqual(result.exit_code, 0)
+        self.assertEqual(result.output, "first\nsecond\n")
+        service_class.return_value.list_agents.assert_called_once_with()
+
+    def test_agent_show_command(self) -> None:
+        with patch("tasc_cli.commands.agent.AgentService") as service_class:
+            service_class.return_value.get_agent.return_value = self._agent("planner")
+
+            result = self.runner.invoke(app, ["agent", "show", "planner"])
+
+        self.assertEqual(result.exit_code, 0)
+        self.assertIn("Metadata", result.output)
+        self.assertIn("Name: planner", result.output)
+        self.assertIn("Role", result.output)
+        self.assertIn("Model", result.output)
+        self.assertIn("Configuration", result.output)
+        service_class.return_value.get_agent.assert_called_once_with("planner")
+
+    def test_agent_delete_command(self) -> None:
+        with patch("tasc_cli.commands.agent.AgentService") as service_class:
+            result = self.runner.invoke(app, ["agent", "delete", "planner"])
+
+        self.assertEqual(result.exit_code, 0)
+        self.assertEqual(result.output, "Agent deleted.\n")
+        service_class.return_value.delete_agent.assert_called_once_with("planner")
+
+    def test_agent_command_reports_agent_errors(self) -> None:
+        with patch("tasc_cli.commands.agent.AgentService") as service_class:
+            service_class.return_value.get_agent.side_effect = AgentException(
+                "Agent not found: planner"
+            )
+
+            result = self.runner.invoke(app, ["agent", "show", "planner"])
+
+        self.assertNotEqual(result.exit_code, 0)
+        self.assertIn("Agent not found: planner", result.output)
+
     @staticmethod
     def _project(name: str) -> Project:
         return Project(
@@ -314,6 +378,35 @@ class CliTests(unittest.TestCase):
                 framework="none",
                 runtime="python",
                 output_directory="output",
+            ),
+        )
+
+    @staticmethod
+    def _agent(name: str) -> Agent:
+        return Agent(
+            metadata=AgentMetadata(
+                name=name,
+                display_name=name,
+                description="",
+                version="0.1.0",
+                author="TASC Builder",
+                created_at=datetime(2026, 8, 3, 12, 0, tzinfo=timezone.utc),
+            ),
+            role=AgentRole(
+                role_name="assistant",
+                responsibilities=[],
+                system_prompt="",
+            ),
+            model=AgentModel(
+                provider="ollama",
+                model="",
+                temperature=0.0,
+                max_tokens=0,
+            ),
+            configuration=AgentConfiguration(
+                tools=[],
+                capabilities=[],
+                environment={},
             ),
         )
 
