@@ -12,7 +12,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "core"))
 
 from tasc_cli.app import app
-from tasc_core.exceptions import ConfigurationException, ValidationException
+from tasc_core.exceptions import (
+    BootstrapException,
+    ConfigurationException,
+    ValidationException,
+)
 
 
 class CliTests(unittest.TestCase):
@@ -167,19 +171,123 @@ class CliTests(unittest.TestCase):
         loader_class.return_value.load.assert_called_once_with(config_path)
 
     def test_bootstrap_command(self) -> None:
-        result = self.runner.invoke(app, ["bootstrap"])
+        with patch("tasc_cli.commands.bootstrap.BootstrapEngine") as engine_class:
+            result = self.runner.invoke(app, ["bootstrap"])
 
         self.assertEqual(result.exit_code, 0)
-        self.assertEqual(result.output, "Bootstrap is not yet implemented.\n")
+        self.assertEqual(result.output, "Bootstrap completed successfully.\n")
+        engine_class.return_value.bootstrap.assert_called_once_with(Path("config/core.yaml"))
 
-    def test_doctor_command(self) -> None:
-        result = self.runner.invoke(app, ["doctor"])
+    def test_bootstrap_command_reports_failure(self) -> None:
+        with patch("tasc_cli.commands.bootstrap.BootstrapEngine") as engine_class:
+            engine_class.return_value.bootstrap.side_effect = BootstrapException(
+                "Bootstrap failed",
+                "TASC-BOOTSTRAP-0001",
+            )
+
+            result = self.runner.invoke(app, ["bootstrap"])
+
+        self.assertNotEqual(result.exit_code, 0)
+        self.assertIn("Bootstrap failed", result.output)
+
+    def test_bootstrap_command_reports_missing_configuration(self) -> None:
+        with patch("tasc_cli.commands.bootstrap.BootstrapEngine") as engine_class:
+            engine_class.return_value.bootstrap.side_effect = BootstrapException(
+                "Bootstrap failed",
+                "TASC-BOOTSTRAP-0001",
+                cause=ConfigurationException("File not found", "TASC-CONFIG-0001"),
+            )
+
+            result = self.runner.invoke(app, ["bootstrap"])
+
+        self.assertNotEqual(result.exit_code, 0)
+        self.assertIn("Configuration file not found", result.output)
+
+    def test_bootstrap_command_uses_explicit_config_path(self) -> None:
+        config_path = Path("custom/core.yaml")
+        with patch("tasc_cli.commands.bootstrap.BootstrapEngine") as engine_class:
+            result = self.runner.invoke(app, ["bootstrap", "--config", str(config_path)])
 
         self.assertEqual(result.exit_code, 0)
-        self.assertEqual(
-            result.output,
-            "Environment diagnostics are not yet implemented.\n",
-        )
+        engine_class.return_value.bootstrap.assert_called_once_with(config_path)
+
+    def test_doctor_command_reports_healthy_environment(self) -> None:
+        with (
+            patch("tasc_cli.commands.doctor.sys.version_info", (3, 12, 0)),
+            patch("tasc_cli.commands.doctor.Path.exists", return_value=True),
+            patch(
+                "tasc_cli.commands.doctor.importlib.import_module",
+                return_value=object(),
+            ),
+        ):
+            result = self.runner.invoke(app, ["doctor"])
+
+        self.assertEqual(result.exit_code, 0)
+        self.assertIn("[PASS] Python Version", result.output)
+        self.assertIn("[PASS] Workspace", result.output)
+        self.assertIn("[PASS] Core Configuration", result.output)
+        self.assertIn("[PASS] Core Package", result.output)
+        self.assertIn("HEALTHY", result.output)
+
+    def test_doctor_command_reports_missing_workspace(self) -> None:
+        with (
+            patch(
+                "tasc_cli.commands.doctor.Path.exists",
+                side_effect=[False, True],
+            ),
+            patch(
+                "tasc_cli.commands.doctor.importlib.import_module",
+                return_value=object(),
+            ),
+        ):
+            result = self.runner.invoke(app, ["doctor"])
+
+        self.assertEqual(result.exit_code, 1)
+        self.assertIn("[FAIL] Workspace", result.output)
+        self.assertIn("UNHEALTHY", result.output)
+
+    def test_doctor_command_reports_missing_core_configuration(self) -> None:
+        with (
+            patch(
+                "tasc_cli.commands.doctor.Path.exists",
+                side_effect=[True, False],
+            ),
+            patch(
+                "tasc_cli.commands.doctor.importlib.import_module",
+                return_value=object(),
+            ),
+        ):
+            result = self.runner.invoke(app, ["doctor"])
+
+        self.assertEqual(result.exit_code, 1)
+        self.assertIn("[FAIL] Core Configuration", result.output)
+
+    def test_doctor_command_reports_missing_core_package(self) -> None:
+        with (
+            patch("tasc_cli.commands.doctor.Path.exists", return_value=True),
+            patch(
+                "tasc_cli.commands.doctor.importlib.import_module",
+                side_effect=ImportError,
+            ),
+        ):
+            result = self.runner.invoke(app, ["doctor"])
+
+        self.assertEqual(result.exit_code, 1)
+        self.assertIn("[FAIL] Core Package", result.output)
+
+    def test_doctor_command_reports_unsupported_python_version(self) -> None:
+        with (
+            patch("tasc_cli.commands.doctor.sys.version_info", (3, 11, 0)),
+            patch("tasc_cli.commands.doctor.Path.exists", return_value=True),
+            patch(
+                "tasc_cli.commands.doctor.importlib.import_module",
+                return_value=object(),
+            ),
+        ):
+            result = self.runner.invoke(app, ["doctor"])
+
+        self.assertEqual(result.exit_code, 1)
+        self.assertIn("[FAIL] Python Version", result.output)
 
 
 if __name__ == "__main__":
