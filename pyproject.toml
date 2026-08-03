@@ -35,8 +35,12 @@ Homepage = "https://github.com/techfellah/tasc-builder"
 Repository = "https://github.com/techfellah/tasc-builder"
 Issues = "https://github.com/techfellah/tasc-builder/issues"
 
+
 [tool.uv.workspace]
 members = ["apps/*", "packages/*"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["tasc_builder"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

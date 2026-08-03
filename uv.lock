@@ -1,1 +1,8 @@
-# This file is intentionally reserved for future uv workspace resolution.
+version = 1
+revision = 3
+requires-python = ">=3.12"
+
+[[package]]
+name = "tasc-builder"
+version = "0.1.0a1"
+source = { editable = "." }
