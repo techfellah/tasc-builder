@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import sys
 import unittest
 from pathlib import Path
@@ -77,6 +78,22 @@ class CliTests(unittest.TestCase):
                     Path("workspace.yaml"),
                 },
             )
+
+    def test_init_workspace_validates_without_manual_edits(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            workspace = Path(temp_dir) / "my-company"
+            init_result = self.runner.invoke(app, ["init", str(workspace)])
+
+            original_directory = Path.cwd()
+            try:
+                os.chdir(workspace)
+                validate_result = self.runner.invoke(app, ["validate"])
+            finally:
+                os.chdir(original_directory)
+
+        self.assertEqual(init_result.exit_code, 0)
+        self.assertEqual(validate_result.exit_code, 0)
+        self.assertEqual(validate_result.output, "Configuration is valid.\n")
 
     def test_init_command_rejects_existing_workspace_without_force(self) -> None:
         with TemporaryDirectory() as temp_dir:
@@ -178,7 +195,7 @@ class CliTests(unittest.TestCase):
         self.assertEqual(result.output, "Bootstrap completed successfully.\n")
         engine_class.return_value.bootstrap.assert_called_once_with(Path("config/core.yaml"))
 
-    def test_bootstrap_command_reports_failure(self) -> None:
+    def test_bootstrap_command_reports_failure_without_cause(self) -> None:
         with patch("tasc_cli.commands.bootstrap.BootstrapEngine") as engine_class:
             engine_class.return_value.bootstrap.side_effect = BootstrapException(
                 "Bootstrap failed",
@@ -188,9 +205,16 @@ class CliTests(unittest.TestCase):
             result = self.runner.invoke(app, ["bootstrap"])
 
         self.assertNotEqual(result.exit_code, 0)
-        self.assertIn("Bootstrap failed", result.output)
+        self.assertEqual(
+            result.output,
+            "Bootstrap failed.\n"
+            "\n"
+            "Reason:\n"
+            "\n"
+            "[TASC-BOOTSTRAP-0001] Bootstrap failed\n",
+        )
 
-    def test_bootstrap_command_reports_missing_configuration(self) -> None:
+    def test_bootstrap_command_reports_root_cause(self) -> None:
         with patch("tasc_cli.commands.bootstrap.BootstrapEngine") as engine_class:
             engine_class.return_value.bootstrap.side_effect = BootstrapException(
                 "Bootstrap failed",
@@ -201,7 +225,14 @@ class CliTests(unittest.TestCase):
             result = self.runner.invoke(app, ["bootstrap"])
 
         self.assertNotEqual(result.exit_code, 0)
-        self.assertIn("Configuration file not found", result.output)
+        self.assertEqual(
+            result.output,
+            "Bootstrap failed.\n"
+            "\n"
+            "Reason:\n"
+            "\n"
+            "[TASC-CONFIG-0001] File not found\n",
+        )
 
     def test_bootstrap_command_uses_explicit_config_path(self) -> None:
         config_path = Path("custom/core.yaml")
@@ -215,11 +246,16 @@ class CliTests(unittest.TestCase):
         with (
             patch("tasc_cli.commands.doctor.sys.version_info", (3, 12, 0)),
             patch("tasc_cli.commands.doctor.Path.exists", return_value=True),
+            patch("tasc_cli.commands.doctor.ConfigurationLoader") as loader_class,
+            patch("tasc_cli.commands.doctor.ConfigurationParser") as parser_class,
+            patch("tasc_cli.commands.doctor.ConfigurationValidator"),
             patch(
                 "tasc_cli.commands.doctor.importlib.import_module",
                 return_value=object(),
             ),
         ):
+            loader_class.return_value.load.return_value = "configuration"
+            parser_class.return_value.parse.return_value = {}
             result = self.runner.invoke(app, ["doctor"])
 
         self.assertEqual(result.exit_code, 0)
@@ -231,15 +267,17 @@ class CliTests(unittest.TestCase):
 
     def test_doctor_command_reports_missing_workspace(self) -> None:
         with (
-            patch(
-                "tasc_cli.commands.doctor.Path.exists",
-                side_effect=[False, True],
-            ),
+            patch("tasc_cli.commands.doctor.Path.exists", return_value=False),
+            patch("tasc_cli.commands.doctor.ConfigurationLoader") as loader_class,
+            patch("tasc_cli.commands.doctor.ConfigurationParser") as parser_class,
+            patch("tasc_cli.commands.doctor.ConfigurationValidator"),
             patch(
                 "tasc_cli.commands.doctor.importlib.import_module",
                 return_value=object(),
             ),
         ):
+            loader_class.return_value.load.return_value = "configuration"
+            parser_class.return_value.parse.return_value = {}
             result = self.runner.invoke(app, ["doctor"])
 
         self.assertEqual(result.exit_code, 1)
@@ -248,28 +286,61 @@ class CliTests(unittest.TestCase):
 
     def test_doctor_command_reports_missing_core_configuration(self) -> None:
         with (
-            patch(
-                "tasc_cli.commands.doctor.Path.exists",
-                side_effect=[True, False],
-            ),
+            patch("tasc_cli.commands.doctor.Path.exists", return_value=True),
+            patch("tasc_cli.commands.doctor.ConfigurationLoader") as loader_class,
             patch(
                 "tasc_cli.commands.doctor.importlib.import_module",
                 return_value=object(),
             ),
         ):
+            loader_class.return_value.load.side_effect = ConfigurationException(
+                "File not found",
+                "TASC-CONFIG-0001",
+            )
             result = self.runner.invoke(app, ["doctor"])
 
         self.assertEqual(result.exit_code, 1)
         self.assertIn("[FAIL] Core Configuration", result.output)
+        self.assertIn("File not found", result.output)
+
+    def test_doctor_command_reports_invalid_core_configuration(self) -> None:
+        with (
+            patch("tasc_cli.commands.doctor.Path.exists", return_value=True),
+            patch("tasc_cli.commands.doctor.ConfigurationLoader") as loader_class,
+            patch("tasc_cli.commands.doctor.ConfigurationParser") as parser_class,
+            patch(
+                "tasc_cli.commands.doctor.ConfigurationValidator"
+            ) as validator_class,
+            patch(
+                "tasc_cli.commands.doctor.importlib.import_module",
+                return_value=object(),
+            ),
+        ):
+            loader_class.return_value.load.return_value = "invalid"
+            parser_class.return_value.parse.return_value = {}
+            validator_class.return_value.validate.side_effect = ValidationException(
+                "Invalid configuration",
+                "TASC-VALIDATION-0004",
+            )
+            result = self.runner.invoke(app, ["doctor"])
+
+        self.assertEqual(result.exit_code, 1)
+        self.assertIn("[FAIL] Core Configuration", result.output)
+        self.assertIn("Invalid configuration", result.output)
 
     def test_doctor_command_reports_missing_core_package(self) -> None:
         with (
             patch("tasc_cli.commands.doctor.Path.exists", return_value=True),
+            patch("tasc_cli.commands.doctor.ConfigurationLoader") as loader_class,
+            patch("tasc_cli.commands.doctor.ConfigurationParser") as parser_class,
+            patch("tasc_cli.commands.doctor.ConfigurationValidator"),
             patch(
                 "tasc_cli.commands.doctor.importlib.import_module",
                 side_effect=ImportError,
             ),
         ):
+            loader_class.return_value.load.return_value = "configuration"
+            parser_class.return_value.parse.return_value = {}
             result = self.runner.invoke(app, ["doctor"])
 
         self.assertEqual(result.exit_code, 1)
@@ -279,11 +350,16 @@ class CliTests(unittest.TestCase):
         with (
             patch("tasc_cli.commands.doctor.sys.version_info", (3, 11, 0)),
             patch("tasc_cli.commands.doctor.Path.exists", return_value=True),
+            patch("tasc_cli.commands.doctor.ConfigurationLoader") as loader_class,
+            patch("tasc_cli.commands.doctor.ConfigurationParser") as parser_class,
+            patch("tasc_cli.commands.doctor.ConfigurationValidator"),
             patch(
                 "tasc_cli.commands.doctor.importlib.import_module",
                 return_value=object(),
             ),
         ):
+            loader_class.return_value.load.return_value = "configuration"
+            parser_class.return_value.parse.return_value = {}
             result = self.runner.invoke(app, ["doctor"])
 
         self.assertEqual(result.exit_code, 1)

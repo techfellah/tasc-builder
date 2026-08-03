@@ -66,8 +66,8 @@ def init(
         "    - core\n"
         "\n"
         "providers:\n"
-        "  - name: default\n"
-        "    kind: placeholder\n"
+        "  name: default\n"
+        "  kind: placeholder\n"
         "\n"
         "bootstrap:\n"
         "  enabled: true\n",

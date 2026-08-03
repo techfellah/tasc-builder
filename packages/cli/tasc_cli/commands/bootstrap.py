@@ -5,7 +5,7 @@ from pathlib import Path
 import typer
 
 from tasc_core.bootstrap import BootstrapEngine
-from tasc_core.exceptions import BootstrapException, ConfigurationException
+from tasc_core.exceptions import BootstrapException
 
 
 def bootstrap(
@@ -15,12 +15,12 @@ def bootstrap(
     try:
         BootstrapEngine().bootstrap(config)
     except BootstrapException as exc:
-        if isinstance(exc.cause, ConfigurationException) and (
-            exc.cause.error_code == "TASC-CONFIG-0001"
-        ):
-            typer.echo(f"Configuration file not found: {config}", err=True)
-        else:
-            typer.echo(str(exc), err=True)
+        reason = exc.cause if exc.cause is not None else exc
+        typer.echo("Bootstrap failed.", err=True)
+        typer.echo(err=True)
+        typer.echo("Reason:", err=True)
+        typer.echo(err=True)
+        typer.echo(str(reason), err=True)
         raise typer.Exit(code=1) from None
 
     typer.echo("Bootstrap completed successfully.")
