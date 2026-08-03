@@ -1,0 +1,12 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: tasc_builder
+      POSTGRES_USER: tasc_builder
+      POSTGRES_PASSWORD: tasc_builder
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
