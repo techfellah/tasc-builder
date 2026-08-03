@@ -1,0 +1,1 @@
+"""Agent exception namespace."""

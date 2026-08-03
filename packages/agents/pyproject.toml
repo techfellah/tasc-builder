@@ -1,0 +1,14 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "tasc-agents"
+version = "0.1.0"
+description = "TASC agents package skeleton"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = ["tasc-core", "tasc-projects"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["tasc_agents"]
