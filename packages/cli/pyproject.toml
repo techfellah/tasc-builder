@@ -8,7 +8,7 @@ version = "0.1.0-alpha.3"
 description = "TASC Builder command-line interface"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = ["tasc-core>=0.1.0", "tasc-projects>=0.1.0", "typer>=0.16"]
+dependencies = ["tasc-core  ", "tasc-projects", "typer>=0.16"]
 
 [project.scripts]
 tasc = "tasc_cli.main:main"

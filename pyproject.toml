@@ -42,6 +42,7 @@ members = ["apps/*", "packages/*"]
 [tool.uv.sources]
 tasc-core = { workspace = true }
 tasc-cli = { workspace = true }
+tasc-projects = { workspace = true }
 
 [tool.hatch.build.targets.wheel]
 packages = ["tasc_builder"]
