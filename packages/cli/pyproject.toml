@@ -1,0 +1,17 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "tasc-cli"
+version = "0.1.0-alpha.2"
+description = "TASC Builder command-line interface"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = ["typer>=0.16"]
+
+[project.scripts]
+tasc = "tasc_cli.main:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["tasc_cli"]
