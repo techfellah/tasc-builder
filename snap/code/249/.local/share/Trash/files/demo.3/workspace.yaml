@@ -1,0 +1,5 @@
+apiVersion: tasc.io/v1alpha1
+kind: Workspace
+
+metadata:
+  name: demo
