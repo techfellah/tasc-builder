@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "tasc-builder"
-version = "0.1.0-alpha.1"
+version = "0.1.0-alpha.3"
 description = "Techfellah AI Software Company Builder"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -38,6 +38,10 @@ Issues = "https://github.com/techfellah/tasc-builder/issues"
 
 [tool.uv.workspace]
 members = ["apps/*", "packages/*"]
+
+[tool.uv.sources]
+tasc-core = { workspace = true }
+tasc-cli = { workspace = true }
 
 [tool.hatch.build.targets.wheel]
 packages = ["tasc_builder"]
