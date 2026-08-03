@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import sys
 import unittest
+from datetime import datetime, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
@@ -11,6 +12,7 @@ from typer.testing import CliRunner
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "core"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "projects"))
 
 from tasc_cli.app import app
 from tasc_core.exceptions import (
@@ -18,6 +20,8 @@ from tasc_core.exceptions import (
     ConfigurationException,
     ValidationException,
 )
+from tasc_projects.exceptions import ProjectException
+from tasc_projects.models import Project, ProjectConfiguration, ProjectMetadata
 
 
 class CliTests(unittest.TestCase):
@@ -241,6 +245,77 @@ class CliTests(unittest.TestCase):
 
         self.assertEqual(result.exit_code, 0)
         engine_class.return_value.bootstrap.assert_called_once_with(config_path)
+
+    def test_project_create_command(self) -> None:
+        with patch("tasc_cli.commands.project.ProjectService") as service_class:
+            result = self.runner.invoke(app, ["project", "create", "demo"])
+
+        self.assertEqual(result.exit_code, 0)
+        self.assertEqual(result.output, "Project created.\n")
+        metadata, configuration = service_class.return_value.create_project.call_args.args
+        self.assertEqual(metadata.name, "demo")
+        self.assertEqual(configuration.output_directory, "output")
+
+    def test_project_list_command(self) -> None:
+        with patch("tasc_cli.commands.project.ProjectService") as service_class:
+            service_class.return_value.list_projects.return_value = [
+                self._project("first"),
+                self._project("second"),
+            ]
+
+            result = self.runner.invoke(app, ["project", "list"])
+
+        self.assertEqual(result.exit_code, 0)
+        self.assertEqual(result.output, "first\nsecond\n")
+        service_class.return_value.list_projects.assert_called_once_with()
+
+    def test_project_show_command(self) -> None:
+        with patch("tasc_cli.commands.project.ProjectService") as service_class:
+            service_class.return_value.get_project.return_value = self._project("demo")
+
+            result = self.runner.invoke(app, ["project", "show", "demo"])
+
+        self.assertEqual(result.exit_code, 0)
+        self.assertIn("Name: demo", result.output)
+        self.assertIn("Language: python", result.output)
+        service_class.return_value.get_project.assert_called_once_with("demo")
+
+    def test_project_delete_command(self) -> None:
+        with patch("tasc_cli.commands.project.ProjectService") as service_class:
+            result = self.runner.invoke(app, ["project", "delete", "demo"])
+
+        self.assertEqual(result.exit_code, 0)
+        self.assertEqual(result.output, "Project deleted.\n")
+        service_class.return_value.delete_project.assert_called_once_with("demo")
+
+    def test_project_command_reports_project_errors(self) -> None:
+        with patch("tasc_cli.commands.project.ProjectService") as service_class:
+            service_class.return_value.get_project.side_effect = ProjectException(
+                "Project not found: demo"
+            )
+
+            result = self.runner.invoke(app, ["project", "show", "demo"])
+
+        self.assertNotEqual(result.exit_code, 0)
+        self.assertIn("Project not found: demo", result.output)
+
+    @staticmethod
+    def _project(name: str) -> Project:
+        return Project(
+            metadata=ProjectMetadata(
+                name=name,
+                display_name=name,
+                description="",
+                version="0.1.0",
+                created_at=datetime(2026, 8, 3, 12, 0, tzinfo=timezone.utc),
+            ),
+            configuration=ProjectConfiguration(
+                language="python",
+                framework="none",
+                runtime="python",
+                output_directory="output",
+            ),
+        )
 
     def test_doctor_command_reports_healthy_environment(self) -> None:
         with (
