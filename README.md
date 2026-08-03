@@ -1,91 +1,102 @@
 # TASC Builder
 
-**Techfellah AI Software Company Builder**
+> **Techfellah AI Software Company Builder**
 
-> Transform a business idea into a fully functioning software project through a configurable AI software company.
+TASC Builder is an AI-native software engineering platform for building, organizing, and orchestrating software projects through intelligent agents.
 
----
-
-## Vision
-
-TASC Builder is an open-source framework for building and operating an AI-driven software company.
-
-Instead of managing individual AI agents, TASC Builder models the structure of a software company through configuration and orchestrates specialized AI workers to execute software projects with minimal manual intervention.
-
-The long-term goal is to enable organizations to define their company, projects, teams, and workflows declaratively while the framework manages software delivery from planning to production.
+The project is designed with a modular, layered architecture that separates infrastructure, domain logic, persistence, execution, and user interfaces, making it easy to extend with new AI providers, workflows, and automation capabilities.
 
 ---
 
-## MVP Goal
+# Status
 
-The first MVP focuses on delivering a production-quality execution kernel that provides:
-
-* Configuration-driven framework initialization
-* Modular architecture
-* Runtime context management
-* Service registry
-* Logging infrastructure
-* Project bootstrapping
-* Command-line interface
-* Foundation for AI agent orchestration
-
----
-
-# Project Status
-
-Current Release
+**Current Version**
 
 ```
-v0.1.0-alpha.2
+v0.1.0-alpha.6
 ```
 
-Current Progress
+## Completed Milestones
 
-| Module                | Status         |
-| --------------------- | -------------- |
-| Repository Foundation | ✅ Complete     |
-| Core Module           | ✅ MVP Complete |
-| CLI                   | 🚧 In Progress |
-| Projects              | ⏳ Planned      |
-| Agents                | ⏳ Planned      |
-| Portal                | ⏳ Planned      |
+* ✅ TASC-001 – Repository Foundation
+* ✅ TASC-002 – Core
+* ✅ TASC-003 – Command Line Interface
+* ✅ TASC-004 – Projects
+* ✅ TASC-005 – Agents
+
+---
+
+# Features
+
+## Core
+
+* Configuration loader
+* YAML configuration parser
+* Configuration validator
+* Bootstrap engine
+* Runtime context
+* Registry
+* Logging service
+* Exception hierarchy
+
+## Command Line Interface
+
+* Workspace initialization
+* Configuration validation
+* Bootstrap
+* Environment diagnostics
+
+## Projects
+
+* Create projects
+* List projects
+* Show project details
+* Delete projects
+* Filesystem persistence
+
+## Agents
+
+* Immutable agent definitions
+* Provider abstraction
+* Agent execution abstraction
+* Filesystem persistence
+* CRUD operations
+* Ollama provider placeholder
 
 ---
 
 # Architecture
 
 ```
-                  TASC Builder
+                 CLI
+                  │
+     ┌────────────┴────────────┐
+     ▼                         ▼
+ProjectService           AgentService
+     │                         │
+     ▼                         ▼
+ProjectRepository      AgentRepository
+     │                         │
+     ▼                         ▼
+Filesystem            Filesystem
 
-                       │
-                       ▼
-
-                 Core Execution Engine
-
-        ┌─────────────────────────────────┐
-        │                                 │
-        │ Configuration Engine            │
-        │ Bootstrap Engine                │
-        │ Runtime Context                 │
-        │ Registry                        │
-        │ Logging                         │
-        │ Exception Framework             │
-        └─────────────────────────────────┘
-
-                       │
-                       ▼
-
-                CLI / Portal / Projects
-
-                       │
-                       ▼
-
-                  AI Workforce
+                          │
+                          ▼
+                    AgentExecutor
+                          │
+                          ▼
+                      Core Registry
+                          │
+                          ▼
+                    IAgentProvider
+                          │
+                          ▼
+                    OllamaProvider
 ```
 
 ---
 
-# Repository Structure
+# Repository Layout
 
 ```
 tasc-builder/
@@ -96,117 +107,191 @@ tasc-builder/
 │   ├── core/
 │   ├── cli/
 │   ├── projects/
-│   ├── agents/
-│   └── portal/
-│
-├── tests/
+│   └── agents/
 │
 ├── docs/
-│
+├── examples/
 ├── scripts/
-│
-├── config/
-│
 └── README.md
 ```
 
 ---
 
-# Core Components
+# Packages
 
-The Core module currently provides:
+## tasc-core
 
-* Exception Framework
-* Logging Framework
-* Runtime Context
-* Service Registry
-* Configuration Loader
-* YAML Parser
-* Configuration Validator
-* Configuration Provider
-* Bootstrap Engine
+Provides shared infrastructure.
 
----
-
-# Configuration Pipeline
-
-```
-core.yaml
-     │
-     ▼
-ConfigurationLoader
-     │
-     ▼
-ConfigurationParser
-     │
-     ▼
-ConfigurationValidator
-     │
-     ▼
-ConfigurationProvider
-     │
-     ▼
-CoreConfiguration
-     │
-     ▼
-Bootstrap Engine
-```
+* Configuration
+* Registry
+* Logging
+* Bootstrap
+* Runtime context
+* Exceptions
 
 ---
 
-# Technology Stack
+## tasc-cli
 
-## Backend
+Command-line interface.
 
-* Python 3.12+
-* Hatchling
-* uv
-* PyYAML
+Commands include:
 
-## Development
+* init
+* validate
+* bootstrap
+* doctor
+* project
+* agent
 
-* Git
-* GitHub
-* Docker
-* VS Code
+---
 
-## AI Development
+## tasc-projects
 
-The framework is designed to support multiple LLM providers through a provider abstraction.
+Project management domain.
 
-The MVP development is performed using AI-assisted implementation while maintaining a provider-agnostic architecture.
+Includes:
+
+* Domain models
+* Repository
+* Service
+* Filesystem persistence
+
+---
+
+## tasc-agents
+
+Agent management domain.
+
+Includes:
+
+* Agent models
+* Services
+* Repository
+* Executor
+* Provider abstraction
+
+---
+
+# CLI Commands
+
+## Initialize a Workspace
+
+```bash
+tasc init my-company
+```
+
+---
+
+## Validate Configuration
+
+```bash
+cd my-company
+
+tasc validate
+```
+
+---
+
+## Bootstrap
+
+```bash
+tasc bootstrap
+```
+
+---
+
+## Environment Diagnostics
+
+```bash
+tasc doctor
+```
+
+---
+
+# Project Commands
+
+Create a project
+
+```bash
+tasc project create inventory
+```
+
+List projects
+
+```bash
+tasc project list
+```
+
+Show project details
+
+```bash
+tasc project show inventory
+```
+
+Delete a project
+
+```bash
+tasc project delete inventory
+```
+
+---
+
+# Agent Commands
+
+Create an agent
+
+```bash
+tasc agent create architect
+```
+
+List agents
+
+```bash
+tasc agent list
+```
+
+Show an agent
+
+```bash
+tasc agent show architect
+```
+
+Delete an agent
+
+```bash
+tasc agent delete architect
+```
 
 ---
 
 # Development
 
-Clone the repository:
+## Create a Virtual Environment
 
 ```bash
-git clone https://github.com/techfellah/tasc-builder.git
-cd tasc-builder
-```
-
-Create a virtual environment:
-
-```bash
-python3 -m venv .venv
+uv venv
 source .venv/bin/activate
 ```
 
-Install dependencies:
+## Install Dependencies
 
 ```bash
 uv sync
 ```
 
-Run the test suite:
+---
+
+## Run Tests
 
 ```bash
-python3 -m unittest discover -s packages/core/tests -p "test_*.py" -v
+python3 -m unittest discover -s packages -p "test_*.py" -v
 ```
 
-Compile all packages:
+---
+
+## Compile
 
 ```bash
 python3 -m compileall packages
@@ -214,50 +299,70 @@ python3 -m compileall packages
 
 ---
 
-# Roadmap
+## Check Whitespace
 
-## v0.1.0
+```bash
+git diff --check
+```
 
-* Core Execution Engine
-* Command Line Interface
-* Project Management
-* Agent Management
-* Bootstrap Process
-* Initial Portal
-* Yuki (Minimal AI Assistant)
+---
+
+# Development Workflow
+
+Every completed feature should satisfy the following:
+
+* All unit tests pass
+* Source compiles successfully
+* `git diff --check` reports no issues
+* Workspace dependencies resolve successfully
+* CLI smoke tests pass
 
 ---
 
 # Design Principles
 
-* Configuration First
-* Modular Architecture
-* Interface-Driven Design
-* Immutable Configuration Models
-* Strong Separation of Concerns
-* Comprehensive Automated Testing
-* Provider-Agnostic AI Integration
+* Interface-first architecture
+* Dependency injection
+* Immutable domain models
+* Thin CLI orchestration
+* Filesystem repositories
+* Provider abstraction
+* Separation of management and execution
+* Modular package boundaries
 
 ---
 
-# Contributing
+# Technology Stack
 
-TASC Builder is an open-source project.
+* Python 3.12+
+* Hatchling
+* uv
+* Typer
+* PyYAML
+* unittest
 
-Contributions are welcome through:
+---
 
-* Bug reports
-* Feature requests
-* Documentation improvements
-* Pull requests
-* Architecture discussions
+# Roadmap
 
-Please ensure all contributions:
+## Completed
 
-* Follow the existing architecture
-* Include appropriate unit tests
-* Pass the complete validation suite
-* Maintain backward compatibility where applicable
+* Repository Foundation
+* Core
+* CLI
+* Projects
+* Agents
+
+## Planned
+
+* Real Ollama integration
+* Additional model providers (OpenAI, Anthropic, Gemini)
+* Workflow orchestration
+* Multi-agent collaboration
+* Event bus
+* Plugin system
+* Web portal
+* Monitoring and telemetry
 
 ---
 
@@ -265,20 +370,10 @@ Please ensure all contributions:
 
 This project is licensed under the MIT License.
 
-See the `LICENSE` file for details.
-
 ---
 
 # Author
 
 **Techfellah**
 
-Building the next generation of AI-driven software engineering frameworks.
-
----
-
-# Acknowledgements
-
-TASC Builder is being developed as an open-source initiative to demonstrate how configurable AI systems can automate software engineering workflows while remaining modular, extensible, and maintainable.
-
-The project emphasizes solid software architecture first, enabling future AI capabilities to be built on a reliable and testable foundation.
+Building an AI-native software engineering platform with a modular, extensible architecture focused on maintainability, testability, and long-term scalability.
