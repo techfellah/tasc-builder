@@ -21,12 +21,3 @@ class IAGentService(ABC):
     @abstractmethod
     def delete_agent(self, name: str) -> None:
         raise NotImplementedError
-
-    @abstractmethod
-    def execute(
-        self,
-        name: str,
-        prompt: str,
-        context: dict[str, object],
-    ) -> str:
-        raise NotImplementedError

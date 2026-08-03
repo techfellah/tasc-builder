@@ -51,7 +51,6 @@ class AgentInterfaceTests(unittest.TestCase):
             "get_agent",
             "list_agents",
             "delete_agent",
-            "execute",
         ):
             self.assertTrue(hasattr(IAGentService, method))
             self.assertTrue(getattr(IAGentService, method).__isabstractmethod__)
