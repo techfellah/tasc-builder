@@ -4,12 +4,15 @@ import sys
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from unittest.mock import patch
 
 from typer.testing import CliRunner
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "core"))
 
 from tasc_cli.app import app
+from tasc_core.exceptions import ConfigurationException, ValidationException
 
 
 class CliTests(unittest.TestCase):
@@ -94,13 +97,74 @@ class CliTests(unittest.TestCase):
             self.assertTrue((workspace / "config" / "core.yaml").is_file())
 
     def test_validate_command(self) -> None:
-        result = self.runner.invoke(app, ["validate"])
+        with (
+            patch("tasc_cli.commands.validate.ConfigurationLoader") as loader_class,
+            patch("tasc_cli.commands.validate.ConfigurationParser") as parser_class,
+            patch(
+                "tasc_cli.commands.validate.ConfigurationValidator"
+            ) as validator_class,
+        ):
+            loader_class.return_value.load.return_value = "apiVersion: tasc.io/v1alpha1"
+            parser_class.return_value.parse.return_value = {}
+
+            result = self.runner.invoke(app, ["validate"])
 
         self.assertEqual(result.exit_code, 0)
-        self.assertEqual(
-            result.output,
-            "Configuration validation is not yet implemented.\n",
+        self.assertEqual(result.output, "Configuration is valid.\n")
+        loader_class.return_value.load.assert_called_once_with(Path("config/core.yaml"))
+        parser_class.return_value.parse.assert_called_once_with(
+            "apiVersion: tasc.io/v1alpha1"
         )
+        validator_class.return_value.validate.assert_called_once_with({})
+
+    def test_validate_command_reports_invalid_configuration(self) -> None:
+        with (
+            patch("tasc_cli.commands.validate.ConfigurationLoader") as loader_class,
+            patch("tasc_cli.commands.validate.ConfigurationParser") as parser_class,
+            patch(
+                "tasc_cli.commands.validate.ConfigurationValidator"
+            ) as validator_class,
+        ):
+            loader_class.return_value.load.return_value = "invalid"
+            parser_class.return_value.parse.return_value = {}
+            validator_class.return_value.validate.side_effect = ValidationException(
+                "Invalid configuration",
+                "TASC-VALIDATION-0001",
+            )
+
+            result = self.runner.invoke(app, ["validate"])
+
+        self.assertNotEqual(result.exit_code, 0)
+        self.assertIn("Invalid configuration", result.output)
+
+    def test_validate_command_reports_missing_configuration_file(self) -> None:
+        with patch("tasc_cli.commands.validate.ConfigurationLoader") as loader_class:
+            loader_class.return_value.load.side_effect = ConfigurationException(
+                "File not found",
+                "TASC-CONFIG-0001",
+            )
+
+            result = self.runner.invoke(app, ["validate"])
+
+        self.assertNotEqual(result.exit_code, 0)
+        self.assertIn("Configuration file not found", result.output)
+
+    def test_validate_command_uses_explicit_config_path(self) -> None:
+        config_path = Path("custom/core.yaml")
+        with (
+            patch("tasc_cli.commands.validate.ConfigurationLoader") as loader_class,
+            patch("tasc_cli.commands.validate.ConfigurationParser") as parser_class,
+            patch(
+                "tasc_cli.commands.validate.ConfigurationValidator"
+            ) as validator_class,
+        ):
+            loader_class.return_value.load.return_value = "configuration"
+            parser_class.return_value.parse.return_value = {}
+
+            result = self.runner.invoke(app, ["validate", "--config", str(config_path)])
+
+        self.assertEqual(result.exit_code, 0)
+        loader_class.return_value.load.assert_called_once_with(config_path)
 
     def test_bootstrap_command(self) -> None:
         result = self.runner.invoke(app, ["bootstrap"])
