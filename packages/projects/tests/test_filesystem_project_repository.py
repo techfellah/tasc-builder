@@ -10,7 +10,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from tasc_projects.exceptions import ProjectException
 from tasc_projects.models import Project, ProjectConfiguration, ProjectMetadata
-from tasc_projects.services import FilesystemProjectRepository
+from tasc_projects.repositories import FilesystemProjectRepository
 
 
 def project(name: str = "demo") -> Project:

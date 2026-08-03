@@ -48,7 +48,11 @@ class FilesystemProjectRepository(IProjectRepository):
         if not projects_path.is_dir():
             return []
 
-        return [self.get(project_path.name) for project_path in sorted(projects_path.iterdir()) if project_path.is_dir()]
+        return [
+            self.get(project_path.name)
+            for project_path in sorted(projects_path.iterdir())
+            if project_path.is_dir()
+        ]
 
     def exists(self, name: str) -> bool:
         return self._project_file(name).is_file()
