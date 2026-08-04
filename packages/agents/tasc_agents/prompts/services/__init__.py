@@ -1,3 +1,5 @@
 """Prompt service namespace."""
 
-__all__: list[str] = []
+from .prompt_service import PromptService
+
+__all__ = ["PromptService"]
