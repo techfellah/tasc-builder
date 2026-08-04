@@ -2,15 +2,10 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-from ..models import Agent
+from ..generation.models import GenerationRequest, GenerationResult
 
 
 class IAgentProvider(ABC):
     @abstractmethod
-    def generate(
-        self,
-        agent: Agent,
-        prompt: str,
-        context: dict[str, object],
-    ) -> str:
+    def generate(self, request: GenerationRequest) -> GenerationResult:
         raise NotImplementedError

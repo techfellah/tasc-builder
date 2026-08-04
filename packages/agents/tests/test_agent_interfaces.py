@@ -40,6 +40,10 @@ class AgentInterfaceTests(unittest.TestCase):
     def test_provider_methods_exist(self) -> None:
         self.assertTrue(hasattr(IAgentProvider, "generate"))
         self.assertTrue(IAgentProvider.generate.__isabstractmethod__)
+        self.assertEqual(
+            list(inspect.signature(IAgentProvider.generate).parameters),
+            ["self", "request"],
+        )
 
     def test_executor_methods_exist(self) -> None:
         self.assertTrue(hasattr(IAgentExecutor, "execute"))
