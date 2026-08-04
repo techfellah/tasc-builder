@@ -1,3 +1,5 @@
 """Prompt repository namespace."""
 
-__all__: list[str] = []
+from .filesystem_prompt_repository import FilesystemPromptRepository
+
+__all__ = ["FilesystemPromptRepository"]
