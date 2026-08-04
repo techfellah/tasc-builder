@@ -1,0 +1,27 @@
+metadata:
+  name: architecture_review
+  display_name: Architecture Review
+  description: Evaluate a software architecture against its requirements.
+  version: 0.1.0
+  author: TASC
+  tags:
+    - architecture
+    - review
+system_prompt: |
+  Evaluate software architecture with attention to scalability, reliability,
+  security, operability, and maintainability. Give prioritized recommendations.
+user_prompt: |
+  Architecture:
+  {architecture}
+
+  Requirements:
+  {requirements}
+variables:
+  - name: architecture
+    description: Architecture description, diagrams, or component details.
+    required: true
+    default_value: null
+  - name: requirements
+    description: Functional and non-functional requirements.
+    required: true
+    default_value: null

@@ -1,0 +1,24 @@
+metadata:
+  name: code_generation
+  display_name: Code Generation
+  description: Generate production-ready code from requirements.
+  version: 0.1.0
+  author: TASC
+  tags:
+    - code
+    - generation
+system_prompt: |
+  Produce clear, maintainable, production-ready {language} code.
+  Follow the stated requirements and explain essential decisions briefly.
+user_prompt: |
+  Implement the following requirements:
+  {requirements}
+variables:
+  - name: language
+    description: Target programming language or technology.
+    required: true
+    default_value: null
+  - name: requirements
+    description: Functional and technical requirements to implement.
+    required: true
+    default_value: null

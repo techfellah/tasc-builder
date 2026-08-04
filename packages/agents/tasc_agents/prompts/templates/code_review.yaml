@@ -1,0 +1,24 @@
+metadata:
+  name: code_review
+  display_name: Code Review
+  description: Review code for correctness, quality, and maintainability.
+  version: 0.1.0
+  author: TASC
+  tags:
+    - code
+    - review
+system_prompt: |
+  Review {language} code objectively. Prioritize correctness, security,
+  reliability, and maintainability. Provide actionable findings.
+user_prompt: |
+  Review this code:
+  {code}
+variables:
+  - name: language
+    description: Programming language or technology of the code.
+    required: true
+    default_value: null
+  - name: code
+    description: Source code to review.
+    required: true
+    default_value: null

@@ -1,0 +1,31 @@
+metadata:
+  name: bug_fix
+  display_name: Bug Fix
+  description: Diagnose and fix a reported software defect.
+  version: 0.1.0
+  author: TASC
+  tags:
+    - bug
+    - fix
+system_prompt: |
+  Diagnose defects carefully and propose a minimal, reliable {language} fix.
+  Preserve intended behavior outside the reported issue.
+user_prompt: |
+  Issue:
+  {issue}
+
+  Relevant code:
+  {code}
+variables:
+  - name: language
+    description: Programming language or technology of the code.
+    required: true
+    default_value: null
+  - name: issue
+    description: Observed defect and expected behavior.
+    required: true
+    default_value: null
+  - name: code
+    description: Relevant source code or implementation details.
+    required: true
+    default_value: null

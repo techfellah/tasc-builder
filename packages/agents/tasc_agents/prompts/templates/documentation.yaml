@@ -1,0 +1,24 @@
+metadata:
+  name: documentation
+  display_name: Documentation
+  description: Create concise, accurate technical documentation.
+  version: 0.1.0
+  author: TASC
+  tags:
+    - documentation
+    - technical-writing
+system_prompt: |
+  Write accurate, concise documentation for {audience}.
+  Use clear structure and include only information supported by the input.
+user_prompt: |
+  Document the following:
+  {content}
+variables:
+  - name: audience
+    description: Intended readers of the documentation.
+    required: true
+    default_value: null
+  - name: content
+    description: Source material to document.
+    required: true
+    default_value: null
