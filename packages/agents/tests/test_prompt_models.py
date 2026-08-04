@@ -13,6 +13,7 @@ from tasc_agents.prompts.models import (
     PromptRenderRequest,
     PromptTemplate,
     PromptVariable,
+    RenderedPrompt,
 )
 
 
@@ -119,6 +120,67 @@ class PromptModelTests(unittest.TestCase):
         )
 
         self.assertIsInstance(json.dumps(request.to_dict()), str)
+
+
+class RenderedPromptModelTests(unittest.TestCase):
+    def test_construction(self) -> None:
+        prompt = RenderedPrompt(
+            system_prompt="You create project plans.",
+            user_prompt="Create a plan for TASC Builder.",
+            variables={"project_name": "TASC Builder"},
+        )
+
+        self.assertEqual(prompt.user_prompt, "Create a plan for TASC Builder.")
+        self.assertEqual(prompt.variables["project_name"], "TASC Builder")
+
+    def test_equality(self) -> None:
+        self.assertEqual(
+            RenderedPrompt(
+                system_prompt="System prompt.",
+                user_prompt="User prompt.",
+                variables={"name": "TASC"},
+            ),
+            RenderedPrompt(
+                system_prompt="System prompt.",
+                user_prompt="User prompt.",
+                variables={"name": "TASC"},
+            ),
+        )
+
+    def test_immutability(self) -> None:
+        prompt = RenderedPrompt(
+            system_prompt="System prompt.",
+            user_prompt="User prompt.",
+            variables={},
+        )
+
+        with self.assertRaises(FrozenInstanceError):
+            prompt.user_prompt = "Changed prompt."
+
+    def test_to_dict(self) -> None:
+        prompt = RenderedPrompt(
+            system_prompt="System prompt.",
+            user_prompt="User prompt.",
+            variables={"name": "TASC"},
+        )
+
+        self.assertEqual(
+            prompt.to_dict(),
+            {
+                "system_prompt": "System prompt.",
+                "user_prompt": "User prompt.",
+                "variables": {"name": "TASC"},
+            },
+        )
+
+    def test_to_dict_is_json_compatible(self) -> None:
+        prompt = RenderedPrompt(
+            system_prompt="System prompt.",
+            user_prompt="User prompt.",
+            variables={"name": "TASC"},
+        )
+
+        self.assertIsInstance(json.dumps(prompt.to_dict()), str)
 
 
 if __name__ == "__main__":
