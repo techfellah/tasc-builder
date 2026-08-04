@@ -6,7 +6,7 @@ import unittest
 from datetime import datetime, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from typer.testing import CliRunner
 
@@ -24,6 +24,7 @@ from tasc_core.exceptions import (
 from tasc_projects.exceptions import ProjectException
 from tasc_projects.models import Project, ProjectConfiguration, ProjectMetadata
 from tasc_agents.exceptions import AgentException
+from tasc_agents.generation.models import GenerationResult, GenerationUsage
 from tasc_agents.models import (
     Agent,
     AgentConfiguration,
@@ -31,6 +32,8 @@ from tasc_agents.models import (
     AgentModel,
     AgentRole,
 )
+from tasc_agents.prompts.exceptions import PromptException, PromptRenderException
+from tasc_agents.prompts.models import PromptTemplate, RenderedPrompt
 
 
 class CliTests(unittest.TestCase):
@@ -362,6 +365,92 @@ class CliTests(unittest.TestCase):
 
         self.assertNotEqual(result.exit_code, 0)
         self.assertIn("Agent not found: planner", result.output)
+
+    def test_agent_run_command_executes_rendered_prompt(self) -> None:
+        agent = self._agent("architect")
+        template = Mock(spec=PromptTemplate)
+        prompt = RenderedPrompt(
+            system_prompt="You are helpful.",
+            user_prompt="Create an API.",
+            variables={"language": "python", "requirements": "Create an API."},
+        )
+        result = GenerationResult(
+            content="Generated API implementation.",
+            provider="ollama",
+            model="llama3",
+            usage=GenerationUsage(input_tokens=10, output_tokens=20, total_tokens=30),
+            finish_reason="stop",
+            duration_ms=125,
+            metadata={},
+        )
+        with (
+            patch("tasc_cli.commands.agent.AgentService") as agent_service_class,
+            patch(
+                "tasc_cli.commands.agent.FilesystemPromptRepository"
+            ) as prompt_repository_class,
+            patch("tasc_cli.commands.agent.PromptService") as prompt_service_class,
+            patch("tasc_cli.commands.agent.OllamaProvider") as provider_class,
+        ):
+            agent_service_class.return_value.get_agent.return_value = agent
+            prompt_repository_class.return_value.get.return_value = template
+            prompt_service_class.return_value.render.return_value = prompt
+            provider_class.return_value.generate.return_value = result
+
+            command_result = self.runner.invoke(
+                app,
+                [
+                    "agent",
+                    "run",
+                    "architect",
+                    "--template",
+                    "code_generation",
+                    "--var",
+                    "language=python",
+                    "--var",
+                    "requirements=Create an API.",
+                ],
+            )
+
+        self.assertEqual(command_result.exit_code, 0)
+        self.assertEqual(
+            command_result.output,
+            "Provider: ollama\n"
+            "Model: llama3\n"
+            "Duration: 125 ms\n"
+            "\n"
+            "Generated API implementation.\n",
+        )
+        agent_service_class.return_value.get_agent.assert_called_once_with("architect")
+        prompt_repository_class.return_value.get.assert_called_once_with("code_generation")
+        prompt_service_class.return_value.render.assert_called_once()
+        render_request = prompt_service_class.return_value.render.call_args.args[0]
+        self.assertEqual(
+            render_request.values,
+            {"language": "python", "requirements": "Create an API."},
+        )
+        provider_class.return_value.generate.assert_called_once()
+
+    def test_agent_run_command_reports_prompt_errors(self) -> None:
+        with (
+            patch("tasc_cli.commands.agent.AgentService") as agent_service_class,
+            patch(
+                "tasc_cli.commands.agent.FilesystemPromptRepository"
+            ) as prompt_repository_class,
+            patch("tasc_cli.commands.agent.PromptService") as prompt_service_class,
+        ):
+            agent_service_class.return_value.get_agent.return_value = self._agent("architect")
+            prompt_repository_class.return_value.get.return_value = Mock(spec=PromptTemplate)
+            prompt_service_class.return_value.render.side_effect = PromptRenderException(
+                "Required prompt variable is missing: language"
+            )
+
+            result = self.runner.invoke(
+                app,
+                ["agent", "run", "architect", "--template", "code_generation"],
+            )
+
+        self.assertNotEqual(result.exit_code, 0)
+        self.assertIn("Required prompt variable is missing: language", result.output)
 
     @staticmethod
     def _project(name: str) -> Project:
