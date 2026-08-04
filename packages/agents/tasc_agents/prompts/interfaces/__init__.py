@@ -1,3 +1,6 @@
 """Prompt interface namespace."""
 
-__all__: list[str] = []
+from .prompt_repository import IPromptRepository
+from .prompt_service import IPromptService
+
+__all__ = ["IPromptRepository", "IPromptService"]
