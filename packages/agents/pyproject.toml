@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "TASC agents package skeleton"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = ["tasc-core", "tasc-projects"]
+dependencies = ["tasc-core", "tasc-projects", "httpx>=0.28"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["tasc_agents"]
