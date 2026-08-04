@@ -2,8 +2,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from ..generation.models import GenerationRequest, GenerationResult
 from ..interfaces import IAgentExecutor, IAgentProvider
 from ..models import Agent
+from ..prompts.models import RenderedPrompt
 
 if TYPE_CHECKING:
     from tasc_core.interfaces.registry import IRegistry
@@ -18,9 +20,14 @@ class AgentExecutor(IAgentExecutor):
     def execute(
         self,
         agent: Agent,
-        prompt: str,
-        context: dict[str, object],
-    ) -> str:
+        prompt: RenderedPrompt,
+        context: dict[str, str],
+    ) -> GenerationResult:
         _ = agent.model.provider
         provider = self._registry.resolve(IAgentProvider)
-        return provider.generate(agent, prompt, context)
+        request = GenerationRequest(
+            prompt=prompt,
+            model=agent.model,
+            metadata=dict(context),
+        )
+        return provider.generate(request)
